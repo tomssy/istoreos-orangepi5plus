@@ -20,7 +20,7 @@
 - SquashFS 系统镜像，根分区大小设置为 1024 MiB。
 - 保留官方网络与初始化设置，不预置个人网络信息。
 
-软件选择在 `config/seed.config` 修改。每次构建会检查必需的设备与软件选项是否在 `make defconfig` 后保留，避免配置项失效却继续生成其他设备镜像。
+软件选择在 `config/seed.config` 修改。`config/feeds.conf` 在官方默认 feeds 基础上增加 LinkEase 的 NAS 与 LuCI 软件源，以及 iStoreOS 维护者的磁盘管理软件源，以提供快速配置和磁盘管理组件。每次构建会检查必需的设备与软件选项是否在 `make defconfig` 后保留，避免配置项失效却继续生成其他设备镜像。
 
 ## 刷写与首次使用
 

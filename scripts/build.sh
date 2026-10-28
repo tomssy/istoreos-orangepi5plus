@@ -30,11 +30,13 @@ case "${1:-}" in
     git -C openwrt checkout --detach FETCH_HEAD
     git -C openwrt rev-parse HEAD > output/diagnostics/source-commit.txt
     grep -q 'define Device/xunlong_orangepi-5-plus' openwrt/target/linux/rockchip/image/legacy.mk
+    cp config/feeds.conf openwrt/feeds.conf
     cd openwrt
     ./scripts/feeds update -a 2>&1 | tee "$ROOT/output/diagnostics/feeds-update.log"
     ./scripts/feeds install -a 2>&1 | tee "$ROOT/output/diagnostics/feeds-install.log"
     cp "$ROOT/config/seed.config" .config
     make defconfig 2>&1 | tee "$ROOT/output/diagnostics/configure.log"
+    cp .config "$ROOT/output/diagnostics/resolved.config"
     # Stop early if upstream changes cause a requested target/package to disappear.
     while IFS= read -r setting; do
       case "$setting" in
@@ -43,7 +45,6 @@ case "${1:-}" in
           ;;
       esac
     done < "$ROOT/config/seed.config"
-    cp .config "$ROOT/output/diagnostics/resolved.config"
     ./scripts/diffconfig.sh > "$ROOT/output/diagnostics/diffconfig"
     for feed in feeds/*; do
       if [[ -d "$feed/.git" ]]; then printf '%s %s\n' "${feed##*/}" "$(git -C "$feed" rev-parse HEAD)"; fi
