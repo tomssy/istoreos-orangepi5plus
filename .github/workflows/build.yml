@@ -1,0 +1,85 @@
+name: Build iStoreOS for Orange Pi 5 Plus
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: '官方源码分支、标签或提交（默认 24.10）'
+        required: true
+        default: istoreos-24.10
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orangepi5plus-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      SOURCE_REF: ${{ inputs.source_ref }}
+      TZ: Asia/Shanghai
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+    steps:
+      - name: Checkout build configuration
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Prepare runner
+        run: bash scripts/build.sh prepare
+
+      - name: Restore compiler cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('config/seed.config') }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('config/seed.config') }}-
+
+      - name: Fetch official sources and configure
+        run: bash scripts/build.sh configure
+
+      - name: Download sources
+        timeout-minutes: 45
+        run: bash scripts/build.sh download
+
+      - name: Compile firmware
+        timeout-minutes: 285
+        run: bash scripts/build.sh compile
+
+      - name: Collect and verify firmware
+        run: bash scripts/build.sh collect
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: iStoreOS-OrangePi5Plus-${{ github.run_number }}
+          path: output/firmware/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Collect diagnostic information
+        if: always()
+        run: |
+          mkdir -p output/diagnostics
+          df -h > output/diagnostics/disk-space.txt
+          for file in .config feeds.conf.default; do
+            if [[ -f "openwrt/$file" ]]; then cp "openwrt/$file" output/diagnostics/; fi
+          done
+          if [[ -d openwrt/logs ]]; then cp -a openwrt/logs output/diagnostics/; fi
+          if [[ -d openwrt ]]; then git -C openwrt rev-parse HEAD > output/diagnostics/source-commit.txt || true; fi
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: build-logs-${{ github.run_number }}
+          path: output/diagnostics/
+          if-no-files-found: warn
+          retention-days: 14
