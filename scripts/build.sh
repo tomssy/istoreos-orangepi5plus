@@ -16,13 +16,14 @@ case "${1:-}" in
       gettext git libncurses-dev libssl-dev python3 python3-setuptools \
       python3-pyelftools rsync swig unzip zlib1g-dev file wget curl \
       ccache libelf-dev subversion time patch perl tar xz-utils zstd \
-      device-tree-compiler u-boot-tools
+      device-tree-compiler u-boot-tools cmake ninja-build pkgconf gperf help2man \
+      libglib2.0-dev libgmp-dev libmpc-dev libmpfr-dev libdw-dev libyaml-dev libfdt-dev bzip2 xxd
     df -h
     available_kb="$(df -Pk "$ROOT" | awk 'NR==2 {print $4}')"
     (( available_kb >= 45 * 1024 * 1024 )) || { echo 'At least 45 GiB free disk space is required'; exit 1; }
     ;;
   configure)
-    ref="${SOURCE_REF:-istoreos-24.10}"
+    ref="${SOURCE_REF:-istoreos-25.12}"
     [[ "$ref" =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] && [[ "$ref" != *..* ]] || { echo 'Invalid source ref'; exit 1; }
     git init openwrt
     git -C openwrt remote add origin https://github.com/istoreos/istoreos.git
@@ -34,17 +35,21 @@ case "${1:-}" in
     cd openwrt
     ./scripts/feeds update -a 2>&1 | tee "$ROOT/output/diagnostics/feeds-update.log"
     ./scripts/feeds install -a 2>&1 | tee "$ROOT/output/diagnostics/feeds-install.log"
-    cp "$ROOT/config/seed.config" .config
+    # Keep the official release's package/kernel/partition options. Replace
+    # its multi-device selection with a single Orange Pi 5 Plus target.
+    awk '!/^(# )?CONFIG_TARGET_DEVICE_/ && !/^CONFIG_TARGET_MULTI_PROFILE=/ && !/^CONFIG_TARGET_ALL_PROFILES=/ && !/^CONFIG_ALL_KMODS=/' \
+      "$ROOT/config/official.seed" > .config
+    cat "$ROOT/config/seed.config" >> .config
     make defconfig 2>&1 | tee "$ROOT/output/diagnostics/configure.log"
     cp .config "$ROOT/output/diagnostics/resolved.config"
-    # Stop early if upstream changes cause a requested target/package to disappear.
+    # Validate the effective device, official partition sizes and core features.
     while IFS= read -r setting; do
-      case "$setting" in
-        CONFIG_TARGET_*=y|CONFIG_PACKAGE_*=y)
-          grep -Fxq "$setting" .config || { echo "Required setting missing after defconfig: $setting"; exit 1; }
-          ;;
-      esac
-    done < "$ROOT/config/seed.config"
+      [[ -z "$setting" || "$setting" == \#* ]] && continue
+      grep -Fxq "$setting" .config || { echo "Required setting missing after defconfig: $setting"; exit 1; }
+    done < "$ROOT/config/required.config"
+    if grep -Eq '^CONFIG_TARGET_(MULTI_PROFILE|ALL_PROFILES)=y' .config; then
+      echo 'Unexpected multi-device configuration'; exit 1
+    fi
     ./scripts/diffconfig.sh > "$ROOT/output/diagnostics/diffconfig"
     for feed in feeds/*; do
       if [[ -d "$feed/.git" ]]; then printf '%s %s\n' "${feed##*/}" "$(git -C "$feed" rev-parse HEAD)"; fi
@@ -55,6 +60,9 @@ case "${1:-}" in
       printf -- '- Official source ref: `%s`\n' "$ref"
       printf -- '- Source commit: `%s`\n' "$(git rev-parse HEAD)"
       echo '- Target: rockchip/armv8, xunlong_orangepi-5-plus'
+      echo '- Official release configuration: 25.12.6-2026102312'
+      echo '- Boot partition: 64 MiB; root partition: 256 MiB; filesystem: SquashFS'
+      echo '- Overlay partition follows the upstream image-generation script.'
     } >> "$GITHUB_STEP_SUMMARY"
     ;;
   download)
@@ -85,11 +93,12 @@ case "${1:-}" in
       if [[ -f "$file" ]]; then cp "$file" output/firmware/; fi
     done
     cp output/diagnostics/source-commit.txt output/diagnostics/feed-commits.txt output/diagnostics/diffconfig output/firmware/
+    cp "$ROOT/config/provenance.json" output/firmware/
     (cd output/firmware && sha256sum -- *.img.gz > sha256sums)
     {
       echo '### Firmware ready'
       printf -- '- Image: `%s`\n' "${images[0]##*/}"
-      echo '- Download the iStoreOS-OrangePi5Plus artifact on this run page.'
+      echo '- Download the iStoreOS-25.12-OrangePi5Plus artifact on this run page.'
       echo '- SHA256 checksums and source/feed commits are included.'
     } >> "$GITHUB_STEP_SUMMARY"
     ;;

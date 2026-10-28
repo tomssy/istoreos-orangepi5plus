@@ -1,41 +1,57 @@
-# Orange Pi 5 Plus 的 iStoreOS 云编译
+# Orange Pi 5 Plus · iStoreOS 25.12 云编译
 
-通过 GitHub Actions 从 [iStoreOS 官方源码](https://github.com/istoreos/istoreos/tree/istoreos-24.10) 编译香橙派 **Orange Pi 5 Plus（RK3588）** 固件。默认使用 `istoreos-24.10` 分支，设备目标为 `rockchip/armv8` 下的 `xunlong_orangepi-5-plus`。
+使用 GitHub Actions，从 [iStoreOS 官方 `istoreos-25.12` 分支](https://github.com/istoreos/istoreos/tree/istoreos-25.12)编译 **Orange Pi 5 Plus（RK3588）** 固件。每次构建获取该分支的最新源码并记录准确提交。
 
-## 开始编译
+## 配置来源
 
-1. 打开本仓库 **Actions** → **Build iStoreOS for Orange Pi 5 Plus**。
-2. 点击 **Run workflow**，保留默认源码分支，再点击运行。
-3. 等待构建完成。完整源码首次构建可能需要数小时；GitHub 标准运行器的单次任务存在时间限制。
-4. 在本次运行页面底部 **Artifacts** 下载 `iStoreOS-OrangePi5Plus-运行序号`。
+采用官方 **25.12.6-2026102312** Rockchip 发布配置。该配置由 [官方固件目录](https://fw.koolcenter.com/iStoreOS/r6s/)提供，在多设备目标中明确包含 `xunlong_orangepi-5-plus`。
 
-解压下载的 ZIP，里面的 `*xunlong_orangepi-5-plus-squashfs-sysupgrade.img.gz` 是目标固件，同时附带 `sha256sums`、构建配置及源码/feeds 提交记录。固件下载保留 30 天，诊断日志保留 14 天。下载 Actions 附件需要登录 GitHub。
+- `config/official.seed`：官方发布的原始 `config.seed`，完整保留作为配置来源。
+- `config/feeds.conf`：官方发布的软件源列表；基础软件源跟随 25.12 源码，其他软件源沿用官方列表。
+- `config/provenance.json`：下载地址、日期、发布版本及原文件 SHA256。
+- `config/seed.config`：本项目的构建覆盖项。只选择 Orange Pi 5 Plus，关闭多设备镜像、全量内核模块仓库、SDK 和 ImageBuilder 构建，设置编译缓存与日志。
+- `config/required.config`：最终配置必须满足的设备、分区与核心软件检查。
 
-本仓库仅在手动触发时编译，不配置定时任务。使用公开仓库的标准 Ubuntu 运行器；不需要另行配置 PAT、ACCESS_TOKEN 或第三方编译服务。
+官方的内核选项、内置软件、文件系统和分区大小沿用发布配置。未自行扩大系统分区，未修改官方启动程序、设备树或分区生成脚本。内核与软件的实际版本随最新 25.12 源码而变，因此这是一份按官方发布配置自行编译的固件，并非官方二进制固件的逐字节复刻。
 
-## 默认内容
+## 分区与系统
 
-- 官方内核、启动程序、Orange Pi 5 Plus 设备树及设备默认驱动。
-- 中文 LuCI、iStore 商店、快速配置、OTA 页面、磁盘管理、Docker 管理。
-- SquashFS 系统镜像，根分区大小设置为 1024 MiB。
-- 保留官方网络与初始化设置，不预置个人网络信息。
+| 项目 | 参数来源及配置 |
+|---|---|
+| 设备 | `xunlong_orangepi-5-plus` |
+| 平台 | `rockchip/armv8` |
+| 内核 | 官方 25.12 分支的 Rockchip 6.12 内核 |
+| 文件系统 | SquashFS，沿用官方发布配置 |
+| 启动分区 | 64 MiB |
+| 系统分区 | 256 MiB |
+| 可写分区 | 官方镜像脚本默认生成 2048 MiB 的独立分区 |
+| 其他空间 | 由运行后的官方存储管理流程处理；镜像不预置 57 GiB 数据分区 |
 
-软件选择在 `config/seed.config` 修改。`config/feeds.conf` 在官方默认 feeds 基础上增加 LinkEase 的 NAS 与 LuCI 软件源，以及 iStoreOS 维护者的磁盘管理软件源，以提供快速配置和磁盘管理组件。每次构建会检查必需的设备与软件选项是否在 `make defconfig` 后保留，避免配置项失效却继续生成其他设备镜像。
+按全新安装使用，不以现有 24.10 的分区布局或配置作为兼容目标。25.12 使用 APK 包管理器，旧版 IPK 软件包和完整系统备份不能直接作为新版的软件环境恢复。
 
-## 刷写与首次使用
+## 运行与下载
 
-固件只适用于 **Orange Pi 5 Plus**。构建成功代表编译与镜像格式检查通过，仍需在实际开发板上验证启动、网口和存储设备。
+1. 打开 **Actions → Build iStoreOS 25.12 for Orange Pi 5 Plus**。
+2. 点击 **Run workflow**，保留默认源码分支 `istoreos-25.12`。
+3. 等待完整源码构建。首次编译可能需要数小时，GitHub 标准运行器的单次任务存在时间限制。
+4. 成功后在运行页面底部 **Artifacts** 下载 `iStoreOS-25.12-OrangePi5Plus-运行序号`。
 
-初次验证建议先将镜像写入一张空闲 microSD 卡，并保留已有系统。写入会覆盖所选卡的数据；应按 Orange Pi 5 Plus 与 iStoreOS 对应的启动说明操作。eMMC、NVMe 和 SPI 的启动组合不同，需要先确认当前引导方式，再决定安装方法。
+解压 ZIP 后，`*xunlong_orangepi-5-plus-squashfs-sysupgrade.img.gz` 是固件，附带 SHA256、升级元数据、源码和 feeds 提交、构建配置与配置来源。固件保留 30 天，诊断日志保留 14 天；下载 Actions 附件需要登录 GitHub。
 
-不要在自己的源码构建上直接安装来自其他固件的内核模块。OTA 页面保留官方行为；执行在线更新前应确认它将切换到的版本及来源，定制包可能被覆盖。
+只配置手动构建，不需要 PAT、ACCESS_TOKEN 或第三方编译服务。公开仓库使用 GitHub 标准 Ubuntu 运行器。
 
-## 构建失败
+## 安装与验证
 
-打开失败步骤查看日志，并下载 `build-logs-运行序号`。构建会保留源码提交、feeds 提交、最终 `.config` 与编译日志。并行编译失败后自动尝试一次单线程详细输出；超时、被取消或运行器故障时，附件可能不完整，应以 Actions 控制台日志为准。
+固件仅用于 **Orange Pi 5 Plus**。建议先用空闲 microSD 卡验证启动、网口、存储和散热，再决定安装到当前系统盘。将镜像写入存储设备会覆盖目标数据；eMMC、NVMe、microSD 与 SPI 的启动组合应按实际设备确认。
 
-编译流程在 `scripts/build.sh`。运行器清理仅用于 GitHub 提供的临时 Linux 虚拟机。工作流使用固定提交版本的 GitHub 官方 Actions。
+构建成功表示源码编译及镜像格式检查通过，开发板实际启动仍需验证。刷入设备、重启和清除现有存储不属于本仓库自动工作流。
+
+## 排查失败
+
+查看失败步骤的 Actions 控制台日志，并下载 `build-logs-运行序号`。日志包含最终配置、源码及 feeds 提交、下载与编译输出。并行编译失败后自动尝试一次单线程详细编译。超时、取消或运行器故障时附件可能不完整。
+
+流程位于 `scripts/build.sh`。运行器清理仅在 GitHub 临时 Linux 虚拟机上执行；GitHub 官方 Actions 固定到提交版本。
 
 ## 来源与许可
 
-固件源码及其软件包遵循各自上游许可证；iStoreOS 主仓库包含 OpenWrt 的 GPL-2.0 许可及各组件许可信息。这里提供独立编译配置，不是官方固件发布站。
+iStoreOS、OpenWrt 和各软件包遵循各自上游许可证。本仓库提供独立的编译自动化与配置记录，不是官方固件发布站。
