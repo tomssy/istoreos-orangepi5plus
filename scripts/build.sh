@@ -76,7 +76,9 @@ case "${1:-}" in
     shopt -s nullglob
     images=("$target"/*xunlong_orangepi-5-plus*squashfs-sysupgrade.img.gz)
     (( ${#images[@]} == 1 )) || { echo "Expected exactly one Orange Pi 5 Plus firmware, found ${#images[@]}"; exit 1; }
-    gzip -t "${images[0]}"
+    # OpenWrt appends upgrade metadata after the gzip stream. Strip it only
+    # from the validation stream; keep the distributable image untouched.
+    openwrt/staging_dir/host/bin/fwtool -T -i output/firmware/image-metadata.json "${images[0]}" | gzip -t
     cp "${images[0]}" output/firmware/
     for file in "$target"/*xunlong_orangepi-5-plus*.manifest "$target/profiles.json" "$target/config.buildinfo" "$target/feeds.buildinfo" "$target/version.buildinfo"; do
       if [[ -f "$file" ]]; then cp "$file" output/firmware/; fi
