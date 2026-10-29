@@ -1,6 +1,9 @@
 name: Build iStoreOS 25.12 for Orange Pi 5 Plus
 
 on:
+  schedule:
+    - cron: '0 4 1 * *'
+      timezone: Asia/Shanghai
   workflow_dispatch:
     inputs:
       source_ref:
@@ -21,7 +24,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     env:
-      SOURCE_REF: ${{ inputs.source_ref }}
+      SOURCE_REF: ${{ inputs.source_ref || 'istoreos-25.12' }}
       TZ: Asia/Shanghai
       CCACHE_DIR: ${{ github.workspace }}/.ccache
     steps:
@@ -61,7 +64,7 @@ jobs:
           name: iStoreOS-25.12-OrangePi5Plus-${{ github.run_number }}
           path: output/firmware/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 45
           compression-level: 0
 
       - name: Collect diagnostic information
@@ -90,3 +93,49 @@ jobs:
           path: output/diagnostics/
           if-no-files-found: warn
           retention-days: 14
+
+  record-monthly-build:
+    name: Record monthly build result
+    needs: build
+    if: ${{ always() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      BUILD_RESULT: ${{ needs.build.result }}
+    steps:
+      - name: Update monthly build record
+        shell: python
+        run: |
+          import base64
+          import datetime
+          import json
+          import os
+          import subprocess
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          branch = os.environ['DEFAULT_BRANCH']
+          api = f'repos/{repo}/contents/.github/monthly-build.json'
+          lookup = subprocess.run(['gh', 'api', f'{api}?ref={branch}'], capture_output=True, text=True)
+          if lookup.returncode and 'HTTP 404' not in lookup.stderr:
+              raise RuntimeError('Could not read the monthly build record: ' + lookup.stderr)
+          now = datetime.datetime.now(datetime.timezone.utc)
+          record = {
+              'recorded_at': now.isoformat(),
+              'source_ref': 'istoreos-25.12',
+              'result': os.environ['BUILD_RESULT'],
+              'run_url': f'https://github.com/{repo}/actions/runs/{os.environ["GITHUB_RUN_ID"]}',
+          }
+          body = {
+              'message': f'Record monthly firmware build {now:%Y-%m}',
+              'branch': branch,
+              'content': base64.b64encode((json.dumps(record, indent=2) + '\n').encode()).decode(),
+          }
+          if lookup.returncode == 0:
+              body['sha'] = json.loads(lookup.stdout)['sha']
+          subprocess.run(['gh', 'api', '--method', 'PUT', api, '--input', '-'],
+                         input=json.dumps(body), text=True, check=True, stdout=subprocess.DEVNULL)
+          print('Monthly build result recorded.')

@@ -36,15 +36,19 @@
 3. 等待完整源码构建。首次编译可能需要数小时，GitHub 标准运行器的单次任务存在时间限制。
 4. 成功后在运行页面底部 **Artifacts** 下载 `iStoreOS-25.12-OrangePi5Plus-运行序号`。
 
-解压 ZIP 后，`*xunlong_orangepi-5-plus-squashfs-sysupgrade.img.gz` 是固件，附带 SHA256、升级元数据、源码和 feeds 提交、构建配置与配置来源。固件保留 30 天，诊断日志保留 14 天；下载 Actions 附件需要登录 GitHub。
+解压 ZIP 后，`*xunlong_orangepi-5-plus-squashfs-sysupgrade.img.gz` 是固件，附带 SHA256、升级元数据、源码和 feeds 提交、构建配置与配置来源。固件保留 45 天，诊断日志保留 14 天；下载 Actions 附件需要登录 GitHub。
 
-只配置手动构建，不需要 PAT、ACCESS_TOKEN 或第三方编译服务。公开仓库使用 GitHub 标准 Ubuntu 运行器。
+每月 **1 日北京时间 04:00** 自动构建一次，同时保留手动构建入口。首次计划运行时间为 **2026-11-01 04:00（Asia/Shanghai）**。定时构建使用默认分支上的工作流，拉取 `istoreos-25.12` 分支最新源码；官方发布配置基线仍使用仓库保存的版本。GitHub 高负载时可能延迟执行。
+
+月度任务结束后，将结果和运行链接写入 `.github/monthly-build.json`，形成仓库活动记录，避免公开仓库因连续 60 天无活动而被 GitHub 自动停用定时工作流。编译任务保持只读权限，只有写记录的独立任务有仓库内容写入权限。
+
+不需要 PAT、ACCESS_TOKEN 或第三方编译服务。公开仓库使用 GitHub 标准 Ubuntu 运行器，无需本地电脑保持开机。
 
 ## 安装与验证
 
 固件仅用于 **Orange Pi 5 Plus**。建议先用空闲 microSD 卡验证启动、网口、存储和散热，再决定安装到当前系统盘。将镜像写入存储设备会覆盖目标数据；eMMC、NVMe、microSD 与 SPI 的启动组合应按实际设备确认。
 
-构建成功表示源码编译及镜像格式检查通过，开发板实际启动仍需验证。刷入设备、重启和清除现有存储不属于本仓库自动工作流。
+用户于 **2026-10-30** 确认[第 5 次构建](https://github.com/tomssy/istoreos-orangepi5plus/actions/runs/40805315060)已刷入 Orange Pi 5 Plus，启动及功能正常。后续月份的源码可能变化，仍需验证新版本实际表现。刷入设备、重启和清除现有存储不属于本仓库自动工作流。
 
 ## 排查失败
 
