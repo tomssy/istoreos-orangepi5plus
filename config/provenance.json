@@ -7,5 +7,5 @@
   "seed_sha256": "437b449c8c1cba3659e4d1cb255a994e214619ebf0036b98b1657c1439efce34",
   "feeds_url": "https://fw.koolcenter.com/iStoreOS/r6s/feeds.conf",
   "feeds_sha256": "429a305f6cceff936e7487fd1974a3fa18fa37750e2780ce10d05530213be283",
-  "note": "The published seed is shared by Rockchip devices and explicitly includes Orange Pi 5 Plus. Build latest istoreos-25.12 sources with this release configuration, selecting only this device and disabling repository-wide all-kmods builds."
+  "note": "The published seed is shared by Rockchip devices and explicitly includes Orange Pi 5 Plus. Build latest istoreos-25.12 sources with this release configuration, selecting only this device while retaining official CONFIG_ALL_KMODS=y."
 }

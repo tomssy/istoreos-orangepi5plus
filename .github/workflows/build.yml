@@ -74,6 +74,12 @@ jobs:
           done
           if [[ -f openwrt/.config ]]; then cp openwrt/.config output/diagnostics/resolved.config; fi
           if [[ -d openwrt/logs ]]; then cp -a openwrt/logs output/diagnostics/; fi
+          for file in openwrt/build_dir/target-*/linux-*/linux-*/.config; do
+            if [[ -f "$file" ]]; then cp "$file" output/diagnostics/kernel.config; fi
+          done
+          for file in openwrt/build_dir/target-*/linux-*/linux-*/Module.symvers; do
+            if [[ -f "$file" ]]; then cp "$file" output/diagnostics/kernel.Module.symvers; fi
+          done
           if [[ -d openwrt ]]; then git -C openwrt rev-parse HEAD > output/diagnostics/source-commit.txt || true; fi
 
       - name: Upload build logs

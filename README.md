@@ -9,7 +9,7 @@
 - `config/official.seed`：官方发布的原始 `config.seed`，完整保留作为配置来源。
 - `config/feeds.conf`：官方发布的软件源列表；基础软件源跟随 25.12 源码，其他软件源沿用官方列表。
 - `config/provenance.json`：下载地址、日期、发布版本及原文件 SHA256。
-- `config/seed.config`：本项目的构建覆盖项。只选择 Orange Pi 5 Plus，关闭多设备镜像、全量内核模块仓库、SDK 和 ImageBuilder 构建，设置编译缓存与日志。
+- `config/seed.config`：本项目的构建覆盖项。只选择 Orange Pi 5 Plus，关闭多设备镜像、SDK 和 ImageBuilder 构建，设置编译缓存与日志。保留官方 `CONFIG_ALL_KMODS=y`，让视频 DMA 等隐式内核依赖由完整模块选择带入。
 - `config/required.config`：最终配置必须满足的设备、分区与核心软件检查。
 
 官方的内核选项、内置软件、文件系统和分区大小沿用发布配置。未自行扩大系统分区，未修改官方启动程序、设备树或分区生成脚本。内核与软件的实际版本随最新 25.12 源码而变，因此这是一份按官方发布配置自行编译的固件，并非官方二进制固件的逐字节复刻。

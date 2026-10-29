@@ -37,7 +37,7 @@ case "${1:-}" in
     ./scripts/feeds install -a 2>&1 | tee "$ROOT/output/diagnostics/feeds-install.log"
     # Keep the official release's package/kernel/partition options. Replace
     # its multi-device selection with a single Orange Pi 5 Plus target.
-    awk '!/^(# )?CONFIG_TARGET_DEVICE_/ && !/^CONFIG_TARGET_MULTI_PROFILE=/ && !/^CONFIG_TARGET_ALL_PROFILES=/ && !/^CONFIG_ALL_KMODS=/' \
+    awk '!/^(# )?CONFIG_TARGET_DEVICE_/ && !/^CONFIG_TARGET_MULTI_PROFILE=/ && !/^CONFIG_TARGET_ALL_PROFILES=/' \
       "$ROOT/config/official.seed" > .config
     cat "$ROOT/config/seed.config" >> .config
     make defconfig 2>&1 | tee "$ROOT/output/diagnostics/configure.log"
@@ -63,6 +63,7 @@ case "${1:-}" in
       echo '- Official release configuration: 25.12.6-2026102312'
       echo '- Boot partition: 64 MiB; root partition: 256 MiB; filesystem: SquashFS'
       echo '- Overlay partition follows the upstream image-generation script.'
+      echo '- All-kmods compilation is enabled as in the official release seed.'
     } >> "$GITHUB_STEP_SUMMARY"
     ;;
   download)
